@@ -1,93 +1,107 @@
 /*-------------------------------- Constants --------------------------------*/
-const buttons = document.querySelectorAll(".button");
-const display = document.querySelector(".display");
-/*-------------------------------- Variables --------------------------------*/
-let displayValue = "0";
-let firstOperand = null;
-let operator = null;
-let waitingForOperand = false;
-/*----------------------------- Event Listeners -----------------------------*/
-buttons.forEach((button) => {
-  button.addEventListener("click", (event) => {
-    const value = event.target.innerText;
 
-    if (button.classList.contains("number")) {
-      inputNumber(value);
-    } else if (button.classList.contains("operator")) {
-      if (value === "C") {
+/*-------------------------------- Variables --------------------------------*/
+let currentDisplayValue = '0';
+let firstOperand = null;
+let awaitingOperand = false;
+let pendingOperator = null;
+/*------------------------ Cached Element References ------------------------*/
+const calculatorButtons = document.querySelectorAll('.button');
+const displayElement = document.querySelector('.display');
+/*----------------------------- Event Listeners -----------------------------*/
+calculatorButtons.forEach((button)=>{
+  button.addEventListener('click',(event)=>{
+    if(button.classList.contains('number')){
+        console.log("Number is: "+event.target.textContent);
+        inputNumber(event.target.textContent);
+    } else if(button.classList.contains('operator')){
+      console.log("Operator is: "+event.target.textContent);
+      //if it equals C then reset the displayed value 
+      if(event.target.textContent === 'C'){
         clear();
-      } else {
-        inputOperator(value);
+      }else{
+        inputOperator(event.target.textContent);
       }
-    } else if (button.classList.contains("equals")) {
-      calculate();
+    } else if(button.classList.contains('equals')){
+      handleEquals();
     }
-  });
-});
+  
+  })
+})
 /*-------------------------------- Functions --------------------------------*/
-function inputNumber(num) {
-  if (waitingForOperand) {
-    displayValue = num;
-    waitingForOperand = false;
-  } else {
-    displayValue = displayValue === "0" ? num : displayValue + num;
-  }
-  updateDisplay();
+const updateDisplay = (value) => {
+  displayElement.textContent =value;
 }
 
-function inputOperator(nextOperator) {
-  const inputValue = parseFloat(displayValue);
+const inputNumber= (number) => {
+  //If waiting for operand: replace display with this number, set waiting to false
+  if(awaitingOperand){
+    currentDisplayValue = number;
+    awaitingOperand = false;
+  }else {
+    currentDisplayValue = currentDisplayValue === '0' ? number : currentDisplayValue + number;
+  }
+  updateDisplay(currentDisplayValue);
+ 
+}
+
+const inputOperator = (operator) => {
+  const inputValue = parseFloat(currentDisplayValue);
+
   if (firstOperand === null) {
     firstOperand = inputValue;
-  } else if (operator) {
-    const newValue = performCalculation(firstOperand, inputValue, operator);
-    displayValue = String(newValue);
-    firstOperand = newValue;
-    updateDisplay();
+  } else if (pendingOperator) {
+    // Calculate with previous operator
+    const result = calculate(firstOperand, inputValue, pendingOperator);
+    updateDisplay(result);
+    firstOperand = result;
   }
-
-  operator = nextOperator;
-  waitingForOperand = true;
+  pendingOperator = operator; // Store the new operator
+  awaitingOperand = true;
 }
 
-function calculate() {
-  const inputValue = parseFloat(displayValue);
-
-  if (firstOperand !== null && operator) {
-    const newValue = performCalculation(firstOperand, inputValue, operator);
-    displayValue = String(newValue);
-    firstOperand = null;
-    operator = null;
-    waitingForOperand = true;
-    updateDisplay();
-  }
-}
-
-function performCalculation(firstOperand, secondOperand, operator) {
-  switch (operator) {
-    case "+":
-      return firstOperand + secondOperand;
-    case "-":
-      return firstOperand - secondOperand;
-    case "*":
-      return firstOperand * secondOperand;
-    case "/":
-      return secondOperand !== 0 ? firstOperand / secondOperand : "Error";
-    default:
-      return secondOperand;
-  }
-}
-
-function clear() {
-  displayValue = "0";
+const clear = () => {
+  currentDisplayValue = '0';
   firstOperand = null;
-  operator = null;
-  waitingForOperand = false;
-  updateDisplay();
+  awaitingOperand = false;
+  pendingOperator = null;
+  updateDisplay(currentDisplayValue);
 }
 
-function updateDisplay() {
-  display.textContent = displayValue;
+const calculate = (firstOperand, secondOperand, operator) => { 
+  switch(operator){
+    case '+':
+      return firstOperand + secondOperand;
+      break;
+    case '-':
+      return firstOperand - secondOperand;
+      break;
+    case '*':
+      return firstOperand * secondOperand;
+      break;
+    case '/':
+      if (secondOperand === 0) {
+        return 'Error';
+        break;
+      }
+      return firstOperand / secondOperand;
+      break;
+    default:  
+      return 'Invalid operator';
+  }
 }
-// Initialize the display
-updateDisplay();
+
+const handleEquals = () => {
+  const secondOperand = parseFloat(currentDisplayValue);
+  if (firstOperand !== null && pendingOperator !== null) {
+    const result = calculate(firstOperand, secondOperand, pendingOperator);
+    updateDisplay(result);
+    currentDisplayValue = result.toString();
+    firstOperand = null;
+    pendingOperator = null;
+    awaitingOperand = true;
+  }
+}
+
+//initialize the display 
+updateDisplay(currentDisplayValue);
